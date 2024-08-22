@@ -161,13 +161,14 @@ export class Schema<S extends Schema.Schema> {
             if ('default' in prop) return prop.default;
             if (prop.nullable && prop.nullable === true) return null;
             if (prop.required && prop.required === true) throw new schemaError(`Property ${key} is required but not provided`);
+            else return undefined;
         }
         switch (prop.type) {
             case 'string': this.validateString(data, prop, key); return data;
             case 'number': this.validateNumber(data, prop, key); return data;
             case 'boolean': this.validateBoolean(data, prop, key); return data;
-            case 'object': return this.processObject(data, prop, key, partial);
-            case 'array': return this.processArray(data, prop, key);
+            case 'array': this.validateArray(data, prop, key); return this.processArray(data, prop, key);
+            case 'object': this.validateObject(data, prop, key, partial); return this.processObject(data, prop, key, partial);
             default: throw new schemaError(`Unknown type in property ${key}`);
         }
     }
@@ -265,6 +266,7 @@ export class Schema<S extends Schema.Schema> {
      */
     protected validateArray(value: any, prop: Schema.Property.Array, key: string) {
         if (value == null && prop.nullable === true) return;
+        console.log(value, prop);
         if (!Array.isArray(value)) throw new schemaError(`Property ${key} must be an array`);
         if (prop.minimum && value.length < prop.minimum) {
             throw new schemaError(`Property ${key} must have at least ${prop.minimum} items`);
