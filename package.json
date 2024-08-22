@@ -1,0 +1,21 @@
+{
+  "name": "manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "compile": "rm build/* -R && tsc",
+    "dev": "npm run compile && tsc --watch",
+    "test": "npm run compile && node test/test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "mongodb": "^6.8.0",
+    "saml.servercore": "^3.7.0-Dev.9",
+    "typescript": "^5.5.4"
+  }
+}
