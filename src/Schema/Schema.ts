@@ -4,63 +4,197 @@ import JSONSchema from './JSONSchema.js';
 export class Schema<S extends Schema.Schema> {
     constructor(
         public readonly schema: S
-    ) {}
+    ) {
+        this.validateStructure();
+    }
+    /**
+     * Validates the overall structure of the schema.
+     * @param schema Optional partial schema to validate, defaults to the full schema.
+     * @param parentKey The key path to the current schema, used for error reporting.
+     */
+    protected validateStructure(schema?: Schema.Schema, parentKey?: string) {
+        const useSchema = schema ?? this.schema;
+        for (const key in useSchema) {
+            const prop = useSchema[key];
+            this.validateProperty(prop, parentKey ? `${parentKey}.${key}` : key);
+        }
+    }
+    /**
+     * Validates a single property within the schema.
+     * @param prop The property to validate.
+     * @param key The key of the property, used for error reporting.
+     */
+    protected validateProperty(prop: Schema.property, key: string): void {
+        switch(prop.type) {
+            case 'string': this.validateStringProperty(prop, key); break;
+            case 'number': this.validateNumberProperty(prop, key); break;
+            case 'boolean': break;
+            case 'array': this.validateArrayProperty(prop, key); break;
+            case 'object': this.validateObjectProperty(prop, key); break;
+            default: throw new schemaError(`Unknown type for property '${key}'`);
+        }
+        if ('default' in prop) this.validateDefaultValue(prop, key);
+    }
+    /**
+     * Validates the default value of a property.
+     * @param prop The property to validate.
+     * @param key The key of the property, used for error reporting.
+    */
+    protected validateDefaultValue(prop: Schema.property, key: string) {
+        if (prop.default === undefined) {
+            if (!prop.required) return;
+            throw new schemaError(`Property '${key}' default value cannot be undefined`)
+        }
+        if (prop.default === null) {
+            if (prop.nullable) return;
+            throw new schemaError(`Property '${key}' default value cannot be null`);
+        }
+        switch (prop.type) {
+            case 'string': this.validateString(prop.default, prop, key); break;
+            case 'number': this.validateNumber(prop.default, prop, key); break;
+            case 'boolean': this.validateBoolean(prop.default, prop, key); break;
+            case 'array': this.validateArray(prop.default, prop, key); break;
+            case 'object': this.validateObject(prop.default, prop, key); break;
+            default: throw new schemaError(`Unknown type for property '${key}'`);
+        }
+    }
+    /**
+     * Validates a string property.
+     * @param prop The string property definition.
+     * @param key The key of the property, used for error reporting.
+     */
+    protected validateStringProperty(prop: Schema.Property.String, key: string): void {
+        if (prop.maxLength !== undefined && prop.minLength !== undefined && prop.maxLength < prop.minLength) {
+            throw new schemaError(`Property '${key}' maxLength must be greater than or equal to minLength`);
+        }
+        if (prop.pattern !== undefined && !(prop.pattern instanceof RegExp)) {
+            throw new schemaError(`Property '${key}' pattern must be a RegExp`);
+        }
+    }
+    /**
+     * Validates a number property.
+     * @param prop The number property definition.
+     * @param key The key of the property, used for error reporting.
+     */
+    protected validateNumberProperty(prop: Schema.Property.Number, key: string): void {
+        if (prop.maximum !== undefined && prop.minimum !== undefined && prop.maximum < prop.minimum) {
+            throw new schemaError(`Property '${key}' maximum must be greater than or equal to minimum`);
+        }
+    }
+    /**
+     * Validates an array property.
+     * @param prop The array property definition.
+     * @param key The key of the property, used for error reporting.
+     */
+    private validateArrayProperty(prop: Schema.Property.Array, key: string): void {
+        if (prop.maximum !== undefined && prop.minimum !== undefined && prop.maximum < prop.minimum) {
+            throw new schemaError(`Property '${key}' maximum must be greater than or equal to minimum`);
+        }
+        this.validateProperty(prop.property, `${key}[]`);
+    }
+    /**
+     * Validates an object property.
+     * @param prop The object property definition.
+     * @param key The key of the property, used for error reporting.
+     */
+    private validateObjectProperty(prop: Schema.Property.Object, key: string): void {
+        this.validateStructure(prop.schema, key);
+    }
+    /**
+     * get the infered schema as an object
+     * is only to be used for testing purposes
+     * @returns the infered schema
+     */
     public get infer(): Schema.Infer.schema<this['schema']> {
         return {} as Schema.Infer.schema<this['schema']>;
     }
+    /**
+     * get the json schema as an object
+     * @returns the json schema
+     */
     public get jsonSchema(): JSONSchema.schema {
         return this.toJsonSchema();
     }
+    /**
+     * get the json schema as a JSON string
+     * @returns the json schema as a string
+     */
     public get jsonSchemaJSON(): string {
         return JSON.stringify(this.jsonSchema);
     }
+    /**
+     * get the list of unique keys
+     * @returns the list of unique keys
+     */
     public get uniques(): string[] {
         return this.listUniques();
     }
     /**
-     * generate an object with the doc data and verify is is valid
-     * @param doc the object to verify
-     * @returns the object with the data
-     * @throws schemaError if the object is not valid
+     * process the provided data
+     * @param data the data to process
+     * @param partial if the data is partial
+     * @returns the processed data
     */
-    public generateValidData(doc: Schema.Infer.schema<this['schema']>, partial: boolean = false): Schema.Infer.schema<this['schema']> {
-        const data: any = {};
-        const iterable = partial ? doc : this.schema;
+    public processData(data: Schema.Infer.schema<this['schema']>, partial: boolean = false): Schema.Infer.schema<this['schema']> {
+        const result: any = {};
+        const iterable = partial ? data : this.schema;
         for (const key in iterable) {
             const prop = this.schema[key];
-            const value = this.isKeyOfSchema(doc, key) ? doc[key] : undefined;
-            data[key] = this.propertyData(value, prop, key);
-            if (data[key] === undefined) delete data[key];
+            const value = this.isKeyOfSchema(data, key) ? data[key] : undefined;
+            result[key] = this.processProperty(value, prop, key, partial);
+            if (result[key] === undefined) delete result[key];
         }
-        console.log(data);
-        return data;
+        console.log(result);
+        return result;
     }
     /**
-     * verify and return the data
-     * @param value the value to verify
-     * @param prop the property to verify
+     * process a property
+     * @param data the data to process
+     * @param prop the property to process
      * @param key the key of the property
-     * @returns the data
+     * @param partial if the data is partial
+     * @returns the processed data
      * @throws schemaError if the data is not valid
-    */
-    protected propertyData(value: any, prop: Schema.property, key: string, partial: boolean = false): any {
-        if (value === undefined || value === null) {
+     */
+    protected processProperty(data: any, prop: Schema.property, key: string, partial: boolean = false): any {
+        if (data === undefined || data === null) {
             if ('default' in prop) return prop.default;
             if (prop.nullable && prop.nullable === true) return null;
             if (prop.required && prop.required === true) throw new schemaError(`Property ${key} is required but not provided`);
         }
         switch (prop.type) {
-            case 'string':
-                this.validateString(value, prop, key);
-                return value;
-            case 'number':
-                this.validateNumber(value, prop, key);
-                return value;
-            case 'boolean': return value;
-            case 'object': return this.objectData(value, prop, key, partial);
-            case 'array': return this.arrayData(value, prop, key);
+            case 'string': this.validateString(data, prop, key); return data;
+            case 'number': this.validateNumber(data, prop, key); return data;
+            case 'boolean': this.validateBoolean(data, prop, key); return data;
+            case 'object': return this.processObject(data, prop, key, partial);
+            case 'array': return this.processArray(data, prop, key);
             default: throw new schemaError(`Unknown type in property ${key}`);
         }
+    }
+    /**
+     * validate a array
+     * @param value the value to validate
+     * @param prop the property to validate
+     * @param key the key of the property
+     * @returns the data
+     * @throws schemaError if the data is not valid
+     */
+    protected processArray(value: any[], prop: Schema.Property.Array, key: string): any {
+        return value.map((item, index) => 
+            this.processProperty(item, prop.property, `${key}[${index}]`)
+        );
+    }
+    /**
+     * validate a object
+     * @param value the value to validate
+     * @param prop the property to validate
+     * @param key the key of the property
+     * @returns the data
+     * @throws schemaError if the data is not valid
+     */
+    protected processObject(value: any, prop: Schema.Property.Object, key: string, partial: boolean = false): any {
+        const handler = new Schema(prop.schema);
+        return handler.processData(value, partial);
     }
     /**
      * validate a string
@@ -70,14 +204,15 @@ export class Schema<S extends Schema.Schema> {
      * @throws schemaError if the data is not valid
      */
     protected validateString(value: string, prop: Schema.Property.String, key: string) {
-        if (!value) return;
-        if (prop.minLength !== undefined && value.length < prop.minLength) {
+        if (value == null && prop.nullable === true) return;
+        if (typeof value !== 'string') throw new schemaError(`Property ${key} must be a string`);
+        if (prop.minLength && value.length < prop.minLength) {
             throw new schemaError(`Property ${key} must have a minimum length of ${prop.minLength}`);
         }
-        if (prop.maxLength !== undefined && value.length > prop.maxLength) {
+        if (prop.maxLength && value.length > prop.maxLength) {
             throw new schemaError(`Property ${key} must have a maximum length of ${prop.maxLength}`);
         }
-        if (prop.pattern !== undefined && !prop.pattern.test(value)) {
+        if (prop.pattern && !prop.pattern.test(value)) {
             throw new schemaError(`Property ${key} must match the pattern ${prop.pattern}`);
         }
     }
@@ -89,47 +224,64 @@ export class Schema<S extends Schema.Schema> {
      * @throws schemaError if the data is not valid
      */
     protected validateNumber(value: number, prop: Schema.Property.Number, key: string) {
-        if (!value) return;
-        if (prop.minimum !== undefined && value < prop.minimum) {
+        if (value == null && prop.nullable === true) return;
+        if (typeof value !== 'number') throw new schemaError(`Property ${key} must be a number`);
+        if (prop.minimum && value < prop.minimum) {
             throw new schemaError(`Property ${key} must be greater than or equal to ${prop.minimum}`);
         }
-        if (prop.maximum !== undefined && value > prop.maximum) {
+        if (prop.maximum && value > prop.maximum) {
             throw new schemaError(`Property ${key} must be less than or equal to ${prop.maximum}`);
         }
+    }
+    /**
+     * validate a boolean
+     * @param value the value to validate
+     * @param prop the property to validate
+     * @param key the key of the property
+     * @throws schemaError if the data is not valid
+     */
+    protected validateBoolean(value: boolean, prop: Schema.Property.Boolean, key: string) {
+        if (value == null && prop.nullable === true) return;
+        if (typeof value !== 'boolean') throw new schemaError(`Property ${key} must be a boolean`);
     }
     /**
      * validate a object
      * @param value the value to validate
      * @param prop the property to validate
      * @param key the key of the property
-     * @returns the data
      * @throws schemaError if the data is not valid
-     */
-    protected objectData(value: any, prop: Schema.Property.Object, key: string, partial: boolean): any {
-        const handler = new Schema(prop.schema);
-        return handler.generateValidData(value, partial);
+    */
+    protected validateObject(value: any, prop: Schema.Property.Object, key: string, pattial = true) {
+        if (value == null && prop.nullable === true) return;
+        if (typeof value !== 'object') throw new schemaError(`Property ${key} must be an object`);
+        this.validateStructure(prop.schema, key);
     }
     /**
      * validate a array
      * @param value the value to validate
      * @param prop the property to validate
      * @param key the key of the property
-     * @returns the data
      * @throws schemaError if the data is not valid
      */
-    protected arrayData(value: any, prop: Schema.Property.Array, key: string): any {
-        if (!value) return value;
-        if (!Array.isArray(value)) throw new schemaError(`Value for key "${key}" must be an array`);
-        if (prop.minimum !== undefined && value.length < prop.minimum) {
-            throw new schemaError(`Array ${key} must have at least ${prop.minimum} items`);
+    protected validateArray(value: any, prop: Schema.Property.Array, key: string) {
+        if (value == null && prop.nullable === true) return;
+        if (!Array.isArray(value)) throw new schemaError(`Property ${key} must be an array`);
+        if (prop.minimum && value.length < prop.minimum) {
+            throw new schemaError(`Property ${key} must have at least ${prop.minimum} items`);
         }
-        if (prop.maximum !== undefined && value.length > prop.maximum) {
-            throw new schemaError(`Array ${key} must have at most ${prop.maximum} items`);
+        if (prop.maximum && value.length > prop.maximum) {
+            throw new schemaError(`Property ${key} must have at most ${prop.maximum} items`);
         }
-        return value.map((item, index) => 
-            this.propertyData(item, prop.property, `${key}[${index}]`)
-        );
+        value.forEach((item, index) => {
+            this.processProperty(item, prop.property, `${key}[${index}]`);
+        });
     }
+    /**
+     * generate a list of unique keys
+     * @param doc the schema to validate
+     * @param parentKey the parent key of the schema
+     * @returns a list of unique keys
+    */
     protected listUniques(doc?: Schema.Schema, parentKey?: string): string[] {
         const uniques: string[] = [];
         if (!doc) doc = this.schema;
@@ -199,20 +351,20 @@ export namespace Schema {
     export interface Document {
         [Key: string]: any;
     }
-    export interface TypeMap<Doc extends Document = Document> {
+    export interface TypeMap {
         string: string;
         number: number;
         boolean: boolean;
-        object: Doc;
-        array: Doc[];
+        object: any;
+        array: any[];
     }
     export namespace Property {
-        interface Base<T extends keyof TypeMap, Doc extends Document = Document> {
+        interface Base<T extends keyof TypeMap> {
             type: T;
             required?: boolean;
             nullable?: boolean;
             unique?: boolean;
-            default?: TypeMap<Doc>[T] | null;
+            default?: TypeMap[T] | null;
         }
         export interface String extends Base<'string'> {
             pattern?: RegExp;
@@ -224,25 +376,25 @@ export namespace Schema {
             maximum?: number;
         }
         export interface Boolean extends Base<'boolean'> {}
-        export interface Object<Doc extends Document = Document> extends Base<'object'> {
-            schema: Schema<Doc>;
+        export interface Object extends Base<'object'> {
+            schema: Schema;
         }
-        export interface Array<Doc extends Document = Document> extends Base<'array'> {
-            property: property<Doc>;
+        export interface Array extends Base<'array'> {
+            property: property;
             minimum?: number;
             maximum?: number;
         }
-        export interface Map<Doc extends Document = Document> {
+        export interface Map {
             string: String;
             number: Number;
             boolean: Boolean;
-            object: Object<Doc>;
-            array: Array<Doc>;
+            object: Object;
+            array: Array;
         }
     }
-    export type property<Doc extends Document = Document> = Property.Map<Doc>[keyof Property.Map];
-    export interface Schema<Doc extends Document = Document> {
-        [Key: string]: property<Doc>;
+    export type property = Property.Map[keyof Property.Map];
+    export interface Schema {
+        [Key: string]: property;
     }
     export namespace Infer {
         export type propertyType<P extends Schema.property> = (
