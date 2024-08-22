@@ -24,7 +24,7 @@ export class Collection<S extends Schema.Schema = Schema.Schema> {
         }
     }
     public async insertOne(doc: Schema.Infer.schema<S>, options?: mongodb.InsertOneOptions): Promise<Collection.insertOneResult<S>> {
-        const data = this.Schema.generateValidData(doc) as mongodb.OptionalUnlessRequiredId<Schema.Infer.schema<S>>;
+        const data = this.Schema.processData(doc) as mongodb.OptionalUnlessRequiredId<Schema.Infer.schema<S>>;
         try { return await this.collection.insertOne(data, options); }
         catch (error) {
             throw new operationError('could not insert one document', error);
