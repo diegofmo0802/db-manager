@@ -1,7 +1,8 @@
 // @ts-check
+import './schemaTest.js';
 import { Utilities } from 'saml.servercore';
 import Manager from '../build/Manager.js';
-import { users, posts } from './testSchemas.js';
+import { users, posts } from './schemas.js';
 
 Utilities.loadEnv('db.env');
 

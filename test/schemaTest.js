@@ -1,20 +1,24 @@
-import Schema from './build/Schema.js';
+import Schema from '../build/Schema/Schema.js';
 // Función de prueba para la clase Schema
 function testSchema() {
     // Definición de un esquema de ejemplo
     const schema = new Schema({
-        str: { type: 'string', required: true, minLength: 5, maxLength: 10, pattern: '^[a-zA-Z]+$' },
+        str: { type: 'string', required: true, minLength: 5, maxLength: 10, pattern: /^[a-zA-Z]+$/ },
         num: { type: 'number', required: true, minimum: 10, maximum: 100 },
         bool: { type: 'boolean', default: true },
-        arr: { type: 'array', property: { type: 'number', minimum: 1, maximum: 10 }, minimum: 2, maximum: 5 },
+        arr: { type: 'array', property: {
+            type: 'number', minimum: 1, maximum: 10
+        }, minimum: 2, X: "", maximum: 5 },
         obj: { type: 'object', schema: {
             subStr: { type: 'string', nullable: true },
-            subNum: { type: 'number', default: 42 },
-        } },
+            subNum: { type: 'number', default: 42, },
+        }},
+        a: {
+            type: 'array',
+            property: { type: 'number' },
+        }
     });
-
     console.log("Esquema inferido:", schema.infer);
-
     try {
         // Prueba 1: Valores correctos
         const validDoc = {
@@ -25,7 +29,7 @@ function testSchema() {
                 subStr: "world"
             }
         };
-        const generatedData1 = schema.generateValidData(validDoc);
+        const generatedData1 = schema.processData(validDoc);
         console.log("Prueba 1 - Datos generados (válidos):", generatedData1);
     } catch (error) {
         console.error("Prueba 1 - Error:", error.message);
@@ -40,7 +44,7 @@ function testSchema() {
                 subStr: "world"
             }
         };
-        const generatedData2 = schema.generateValidData(invalidDoc1);
+        const generatedData2 = schema.processData(invalidDoc1);
         console.log("Prueba 2 - Datos generados (falta str):", generatedData2);
     } catch (error) {
         console.error("Prueba 2 - Error:", error.message);
@@ -56,7 +60,7 @@ function testSchema() {
                 subStr: "world"
             }
         };
-        const generatedData3 = schema.generateValidData(invalidDoc2);
+        const generatedData3 = schema.processData(invalidDoc2);
         console.log("Prueba 3 - Datos generados (str no cumple con el patrón):", generatedData3);
     } catch (error) {
         console.error("Prueba 3 - Error:", error.message);
@@ -72,7 +76,7 @@ function testSchema() {
                 subStr: "world"
             }
         };
-        const generatedData4 = schema.generateValidData(invalidDoc3);
+        const generatedData4 = schema.processData(invalidDoc3);
         console.log("Prueba 4 - Datos generados (array demasiado grande):", generatedData4);
     } catch (error) {
         console.error("Prueba 4 - Error:", error.message);
@@ -87,12 +91,11 @@ function testSchema() {
                 subStr: null
             }
         };
-        const generatedData5 = schema.generateValidData(partialDoc);
+        const generatedData5 = schema.processData(partialDoc);
         console.log("Prueba 5 - Datos generados (valores por defecto y nullables):", generatedData5);
     } catch (error) {
         console.error("Prueba 5 - Error:", error.message);
     }
-    console.log(schema.toJsonSchema());
 }
 
 // Ejecutar las pruebas
