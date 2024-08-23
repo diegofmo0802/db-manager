@@ -133,6 +133,12 @@ export namespace Collection {
                 Infer<S> & Utilities.flatten.Object<Infer<S>> // & Schema.Document
             )}`;
         }
+        interface UnwindStr {
+            $unwind: {
+                path: string
+                preserveNullAndEmptyArrays?: boolean;
+            } | string;
+        }
         interface skip {
             $skip: number;
         }
@@ -167,7 +173,7 @@ export namespace Collection {
         > = (
             skip | limit | sort<S>
             | Match<S>  | Lookup<Ss, S>
-            | Unwind<S> | Project<S>
+            | Unwind<S> | UnwindStr | Project<S>
         )
     }
     export namespace Update {
