@@ -15,7 +15,7 @@
   "devDependencies": {
     "@types/node": "^22.5.0",
     "mongodb": "^6.8.0",
-    "saml.servercore": "^3.7.0-Dev.9",
+    "saml.servercore": "^3.7.0-Dev.11",
     "typescript": "^5.5.4"
   }
 }
