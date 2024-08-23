@@ -42,7 +42,7 @@ export class Collection<
             throw new operationError('could not insert one document', error);
         }
     }
-    public agregate<Result extends Document = any>(pipeline: Collection.agregate.option<Ss, S>[], options?: mongodb.AggregateOptions): Promise<Result[]> {
+    public aggregate<Result extends Schema.Document = any>(pipeline: Collection.aggregate.option<Ss, S>[], options?: mongodb.AggregateOptions): Promise<Result[]> {
         try { return this.collection.aggregate<Result>(pipeline, options).toArray(); }
         catch (error) {
             throw new operationError('could not agregate documents', error);
@@ -119,7 +119,7 @@ export namespace Collection {
     export type Filter<S extends Schema.Schema> = mongodb.Filter<
         Infer<S>
     > & Partial<Utilities.flatten.Object<Infer<S>>>;
-    export namespace agregate {
+    export namespace aggregate {
         export interface option<
             Ss extends Record<string, Schema<any>>,
             S extends Schema.Schema,
