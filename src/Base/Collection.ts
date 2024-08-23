@@ -125,9 +125,24 @@ export namespace Collection {
         }
         interface Unwind<S extends Schema.Schema> {
             $unwind: {
-                path: keyof Infer<S>;
+                path: `${keyof (
+                    Infer<S> & Utilities.flatten.Object<Infer<S>> & Schema.Document
+                )}`;
                 preserveNullAndEmptyArrays?: boolean;
-            };
+            } | `${keyof (
+                Infer<S> & Utilities.flatten.Object<Infer<S>> & Schema.Document
+            )}`;
+        }
+        interface skip {
+            $skip: number;
+        }
+        interface limit {
+            $limit: number;
+        }
+        interface sort<S extends Schema.Schema> {
+            $sort: { [Key in keyof (
+                Infer<S> & Utilities.flatten.Object<Infer<S>> & Schema.Document
+            )]?: 1 | -1; };
         }
         interface Project<S extends Schema.Schema> {
             $project: { [Key in keyof (
@@ -150,8 +165,9 @@ export namespace Collection {
             Ss extends Record<string, Schema<any>>,
             S extends Schema.Schema,
         > = (
-            Match<S> | Unwind<S> | Project<S>
-            | Lookup<Ss, S>
+            skip | limit | sort<S>
+            | Match<S>  | Lookup<Ss, S>
+            | Unwind<S> | Project<S>
         )
     }
     export namespace Update {
