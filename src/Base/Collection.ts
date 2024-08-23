@@ -63,8 +63,7 @@ export class Collection<S extends Schema.Schema = Schema.Schema> {
 export namespace Collection {
     export type filter<S extends Schema.Schema = Schema.Schema> = mongodb.Filter<
         Schema.Infer.schema<S>
-        & Utilities.flatten.Object<Schema.Infer.schema<S>>
-    >;
+    > & Utilities.flatten.Object<Schema.Infer.schema<S>>;
     export type insertOneResult<S extends Schema.Schema = Schema.Schema> = mongodb.InsertOneResult<
         Schema.Infer.schema<S>
     >
