@@ -350,6 +350,7 @@ export class Schema<S extends Schema.Schema> {
 }
 
 export namespace Schema {
+    export type WithID<T> = T & { _id: string };
     export interface Document {
         [Key: string]: any;
     }

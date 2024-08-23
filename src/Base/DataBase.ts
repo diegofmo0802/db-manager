@@ -18,7 +18,7 @@ export class DataBase<Ss extends Record<string, Schema<any>>> {
 
     public collection<N extends keyof Ss>(name: N): Collection<Ss[N]['schema']> {
         const schema = this.schemas[name];
-        return new Collection(this.db, name as string, schema);
+        return new Collection(this, name as string, schema);
     }
     public async init(): Promise<void> {
         for (const schema in this.schemas) {
