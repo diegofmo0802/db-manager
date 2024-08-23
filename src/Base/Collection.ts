@@ -125,7 +125,7 @@ export namespace Collection {
             S extends Schema.Schema,
             Destination extends keyof Ss = keyof Ss
         > {
-            $match: Filter<Schema.Schema>;
+            $match: Filter<S>;
             $lookup: {
                 from: Destination;
                 localField: keyof Utilities.flatten.Object<Infer<S>>;
