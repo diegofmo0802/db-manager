@@ -16,7 +16,7 @@ export class DataBase<Ss extends Record<string, Schema<any>>> {
         this.db = this.connection.db(name, options);
     }
 
-    public collection<N extends keyof Ss>(name: N): Collection<Ss[N]['schema']> {
+    public collection<N extends keyof Ss>(name: N): Collection<Ss, Ss[N]['schema']> {
         const schema = this.schemas[name];
         return new Collection(this, name as string, schema);
     }
