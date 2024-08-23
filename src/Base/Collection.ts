@@ -35,17 +35,17 @@ export class Collection<
             throw new operationError('could not find documents: ', error);
         }
     }
+    public aggregate<Result extends Schema.Document = any>(pipeline: Collection.aggregate.option<Ss, S>[], options?: mongodb.AggregateOptions): Promise<Result[]> {
+        try { return this.collection.aggregate<Result>(pipeline, options).toArray(); }
+        catch (error) {
+            throw new operationError('could not aggregate documents', error);
+        }
+    }
     public async insertOne(doc: Collection.Infer<S>, options?: mongodb.InsertOneOptions): Promise<Collection.Insert.Result<S>> {
         const data = this.Schema.processData(doc) as mongodb.OptionalUnlessRequiredId<Collection.Infer<S>>;
         try { return await this.collection.insertOne(data, options); }
         catch (error) {
             throw new operationError('could not insert one document', error);
-        }
-    }
-    public aggregate<Result extends Schema.Document = any>(pipeline: Collection.aggregate.option<Ss, S>[], options?: mongodb.AggregateOptions): Promise<Result[]> {
-        try { return this.collection.aggregate<Result>(pipeline, options).toArray(); }
-        catch (error) {
-            throw new operationError('could not agregate documents', error);
         }
     }
     public insertMany(docs: Collection.Infer<S>[], options?: mongodb.BulkWriteOptions): Promise<Collection.Insert.ManyResult<S>> {
@@ -120,23 +120,39 @@ export namespace Collection {
         Infer<S>
     > & Partial<Utilities.flatten.Object<Infer<S>>>;
     export namespace aggregate {
-        export interface option<
+        interface Match<S extends Schema.Schema> {
+            $match: Filter<S>;
+        }
+        interface Unwind<S extends Schema.Schema> {
+            $unwind: {
+                path: keyof Infer<S>;
+                preserveNullAndEmptyArrays?: boolean;
+            };
+        }
+        interface Project<S extends Schema.Schema> {
+            $project: { [Key in keyof (
+                Infer<S> & Utilities.flatten.Object<Infer<S>> & Schema.Document
+            )]?: 1 | 0; };
+        }
+        interface Lookup<
             Ss extends Record<string, Schema<any>>,
             S extends Schema.Schema,
             Destination extends keyof Ss = keyof Ss
         > {
-            $match: Filter<S>;
             $lookup: {
                 from: Destination;
                 localField: keyof Utilities.flatten.Object<Infer<S>>;
                 foreignField: keyof Utilities.flatten.Object<Infer<Ss[Destination]['schema']>>;
                 as: string;
             };
-            $unwind: {
-                path: string;
-                preserveNullAndEmptyArrays: boolean;
-            };
         }
+        export type option<
+            Ss extends Record<string, Schema<any>>,
+            S extends Schema.Schema,
+        > = (
+            Match<S> | Unwind<S> | Project<S>
+            | Lookup<Ss, S>
+        )
     }
     export namespace Update {
         export type Filter<S extends Schema.Schema> = mongodb.UpdateFilter<

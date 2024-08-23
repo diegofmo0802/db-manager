@@ -29,6 +29,6 @@ export class CollectionSession<Ss extends Record<string, Schema<any>>, SName ext
 export namespace CollectionSession {
     export type operation<
         Ss extends Record<string, Schema<any>>, SName extends keyof Ss, Ret = any
-    > = (Db: DataBase<Ss>, collection: Collection<Ss[SName]['schema']>) => Promise<Ret>;
+    > = (Db: DataBase<Ss>, collection: Collection<Ss, Ss[SName]['schema']>) => Promise<Ret>;
 }
 export default CollectionSession;
