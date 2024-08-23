@@ -400,31 +400,38 @@ export namespace Schema {
         [Key: string]: property;
     }
     export namespace Infer {
-        export type propertyType<P extends Schema.property> = (
+        export type propertyType<P extends Schema.property, Partial extends boolean = false> = (
             P extends Property.String  ? string  :
             P extends Property.Number  ? number  :
             P extends Property.Boolean ? boolean :
-            P extends Property.Object  ? schema<P['schema']> :
+            P extends Property.Object  ? (
+                Partial extends false
+                ? schema<P['schema']>
+                : schemePartial<P['schema']>
+            ) :
             P extends Property.Array   ? propertyType<P['property']>[] :
             never
         );
-        export type property<P extends Schema.property> = (
+        export type property<P extends Schema.property, Partial extends boolean = false> = (
             P['required'] extends true ?
-                propertyType<P> :
+                propertyType<P, Partial> :
             undefined extends P['default'] ?
                 undefined extends P['nullable'] ?
-                    propertyType<P> | undefined :
+                    propertyType<P, Partial> | undefined :
                     P['nullable'] extends true ?
-                        propertyType<P> | null :
-                        propertyType<P>
+                        propertyType<P, Partial> | null :
+                        propertyType<P, Partial>
                 : P['default'] extends null ?
-                    propertyType<P> | null :
-                    propertyType<P>
+                    propertyType<P, Partial> | null :
+                    propertyType<P, Partial>
         );
         export type schema<S extends Schema> = {
-            [K in keyof S as S[K]['required'] extends true ? K : never]: property<S[K]>
+            [K in keyof S as S[K]['required'] extends true ? K : never]: property<S[K]>;
         } & {
-            [K in keyof S as S[K]['required'] extends true ? never : K]?: property<S[K]>
+            [K in keyof S as S[K]['required'] extends true ? never : K]?: property<S[K]>;
+        };
+        export type schemePartial<S extends Schema> = {
+            [K in keyof S]?: property<S[K], true>;
         };
         export type schemaBase<S extends Schema> = {
             [K in keyof S]: property<S[K]>
