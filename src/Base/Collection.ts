@@ -126,11 +126,11 @@ export namespace Collection {
         interface Unwind<S extends Schema.Schema> {
             $unwind: {
                 path: `${keyof (
-                    Infer<S> & Utilities.flatten.Object<Infer<S>> & Schema.Document
+                    Infer<S> & Utilities.flatten.Object<Infer<S>> // & Schema.Document
                 )}`;
                 preserveNullAndEmptyArrays?: boolean;
             } | `${keyof (
-                Infer<S> & Utilities.flatten.Object<Infer<S>> & Schema.Document
+                Infer<S> & Utilities.flatten.Object<Infer<S>> // & Schema.Document
             )}`;
         }
         interface skip {
