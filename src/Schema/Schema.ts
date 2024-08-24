@@ -134,8 +134,9 @@ export class Schema<S extends Schema.Schema> {
      * @param data the data to process
      * @param partial if the data is partial
      * @returns the processed data
-    */
-    public processData(data: Schema.Infer.schema<this['schema']>, partial: boolean = false): Schema.Infer.schema<this['schema']> {
+     * @throws schemaError if the data is not valid
+     */
+    public processData(data: Schema.Infer.schema<this['schema']>, partial: boolean = false): Schema.Infer.schema<this['schema']> | Schema.Infer.schemaPartial<this['schema']> {
         const result: any = {};
         const iterable = partial ? data : this.schema;
         for (const key in iterable) {
@@ -144,7 +145,6 @@ export class Schema<S extends Schema.Schema> {
             result[key] = this.processProperty(value, prop, key, partial);
             if (result[key] === undefined) delete result[key];
         }
-        console.log(result);
         return result;
     }
     /**
@@ -342,7 +342,7 @@ export class Schema<S extends Schema.Schema> {
      * @returns true if the key is in the schema
      */
     private isKeyOfSchema(
-        doc: Schema.Infer.schema<this['schema']>, 
+        doc: Object, 
         key: keyof this['schema']
     ): key is keyof typeof doc {
         return key in doc;
@@ -407,7 +407,7 @@ export namespace Schema {
             P extends Property.Object  ? (
                 Partial extends false
                 ? schema<P['schema']>
-                : schemePartial<P['schema']>
+                : schemaPartial<P['schema']>
             ) :
             P extends Property.Array   ? propertyType<P['property']>[] :
             never
@@ -430,7 +430,7 @@ export namespace Schema {
         } & {
             [K in keyof S as S[K]['required'] extends true ? never : K]?: property<S[K]>;
         };
-        export type schemePartial<S extends Schema> = {
+        export type schemaPartial<S extends Schema> = {
             [K in keyof S]?: property<S[K], true>;
         };
         export type schemaBase<S extends Schema> = {
