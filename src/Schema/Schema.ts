@@ -150,7 +150,7 @@ export class Schema<S extends Schema.Schema> {
     }
     public processPartialData(
         data: Partial<Schema.Flatten<this['schema']>> & Partial<Schema.Infer<this['schema']>> & Schema.Document,
-    ): Partial<Schema.Flatten<this['schema']>> {
+    ): Partial<Schema.Flatten<this['schema']>> & Partial<Schema.Infer<this['schema']>> & Schema.Document {
         const result: any = {};
         let currentProp: Schema.property;
         for (const key in data) {

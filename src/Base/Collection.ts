@@ -56,12 +56,14 @@ export class Collection<
         }
     }
     public async updateOne(filter: Collection.Filter<S>, update: Collection.Update.Filter<S>, options?: mongodb.UpdateOptions): Promise<Collection.Update.Result<S>> {
+        if (update.$set) update.$set = this.Schema.processPartialData(update.$set);
         try { return await this.collection.updateOne(filter, update, options); }
         catch (error) {
             throw new operationError('could not update one document', error);
         }
     }
     public async updateMany(filter: Collection.Filter<S>, update: Collection.Update.Filter<S>, options?: mongodb.UpdateOptions): Promise<Collection.Update.Result<S>> {
+        if (update.$set) update.$set = this.Schema.processPartialData(update.$set);
         try { return await this.collection.updateMany(filter, update, options); }
         catch (error) {
             throw new operationError('could not update many documents', error);
@@ -113,8 +115,8 @@ export namespace Collection {
     export type Infer<S extends Schema.Schema> = (
         Schema.Infer.schema<S>
     );
-    export type WithID<S extends Schema.Schema> = (
-        mongodb.WithId<Infer<S>>
+    export type Flatten<S extends Schema.Schema> = (
+        Schema.Flatten<S>
     );
     export type Filter<S extends Schema.Schema> = mongodb.Filter<
         Infer<S>
@@ -179,7 +181,9 @@ export namespace Collection {
     export namespace Update {
         export type Filter<S extends Schema.Schema> = mongodb.UpdateFilter<
             Infer<S>
-        > & Partial<Utilities.Flatten.Object<Infer<S>>>;
+        > & {
+            $set: Partial<Flatten<S>>;
+        };
         export type Result<S extends Schema.Schema> = mongodb.UpdateResult<
             Infer<S>
         >;
