@@ -1,3 +1,4 @@
+import { Utilities } from 'saml.servercore';
 import { schemaError } from '../Error.js';
 import JSONSchema from './JSONSchema.js';
 
@@ -105,8 +106,8 @@ export class Schema<S extends Schema.Schema> {
      * is only to be used for testing purposes
      * @returns the infered schema
      */
-    public get infer(): Schema.Infer.schema<this['schema']> {
-        return {} as Schema.Infer.schema<this['schema']>;
+    public get infer(): Schema.Infer<this['schema']> {
+        return {} as Schema.Infer<this['schema']>;
     }
     /**
      * get the json schema as an object
@@ -136,13 +137,40 @@ export class Schema<S extends Schema.Schema> {
      * @returns the processed data
      * @throws schemaError if the data is not valid
      */
-    public processData(data: Schema.Infer.schema<this['schema']>, partial: boolean = false): Schema.Infer.schema<this['schema']> | Schema.Infer.schemaPartial<this['schema']> {
+    public processData(data: Schema.Infer<this['schema']>, partial: boolean = false): Schema.Infer<this['schema']> {
         const result: any = {};
         const iterable = partial ? data : this.schema;
         for (const key in iterable) {
             const prop = this.schema[key];
-            const value = this.isKeyOfSchema(data, key) ? data[key] : undefined;
+            const value = this.isKeyOf(data, key) ? data[key] : undefined;
             result[key] = this.processProperty(value, prop, key, partial);
+            if (result[key] === undefined) delete result[key];
+        }
+        return result;
+    }
+    public processPartialData(
+        data: Partial<Schema.Flatten<this['schema']>> & Partial<Schema.Infer<this['schema']>> & Schema.Document,
+    ): Partial<Schema.Flatten<this['schema']>> {
+        const result: any = {};
+        let currentProp: Schema.property;
+        for (const key in data) {
+            const value = this.isKeyOf(data, key) ? data[key] : undefined;
+            const subKeys = key.split('.');
+            const firstKey = subKeys.shift();
+            if (!firstKey || !(firstKey in this.schema)) throw new schemaError(`Unknown property ${firstKey}`);
+            currentProp = this.schema[firstKey];
+            if (subKeys.length === 0) {
+                result[key] = this.processProperty(value, currentProp, key);
+            } else {
+                if (currentProp.type !== 'object') throw new schemaError(`Property ${key} is not an object`);
+                let objectProp = currentProp;
+                let usedKeys: string[] = []
+                subKeys.forEach((subKey) => { usedKeys.push(subKey);
+                    if (!(subKey in objectProp.schema)) throw new schemaError(`Unknown property ${firstKey}.${usedKeys.join('.')}`);
+                    currentProp = objectProp.schema[subKey];
+                });
+                result[key] = this.processProperty(value, currentProp, key);
+            }
             if (result[key] === undefined) delete result[key];
         }
         return result;
@@ -181,9 +209,11 @@ export class Schema<S extends Schema.Schema> {
      * @throws schemaError if the data is not valid
      */
     protected processArray(value: any[], prop: Schema.Property.Array, key: string): any {
-        return value.map((item, index) => 
-            this.processProperty(item, prop.property, `${key}[${index}]`)
-        );
+        try {
+            return value.map((item, index) =>  this.processProperty(item, prop.property, `${key}[${index}]`));
+        } catch (error) {
+            throw new schemaError(`Property ${key} is not valid: ${error}`);
+        }
     }
     /**
      * validate a object
@@ -195,7 +225,11 @@ export class Schema<S extends Schema.Schema> {
      */
     protected processObject(value: any, prop: Schema.Property.Object, key: string, partial: boolean = false): any {
         const handler = new Schema(prop.schema);
-        return handler.processData(value, partial);
+        try {
+            return handler.processData(value, partial);
+        } catch (error) {
+            throw new schemaError(`Property ${key} is not valid: ${error}`);
+        }
     }
     /**
      * validate a string
@@ -341,16 +375,17 @@ export class Schema<S extends Schema.Schema> {
      * @param key the key to verify
      * @returns true if the key is in the schema
      */
-    private isKeyOfSchema(
-        doc: Object, 
-        key: keyof this['schema']
-    ): key is keyof typeof doc {
-        return key in doc;
-    }
+    private isKeyOf<T extends Object>(
+        doc: T,
+        key: any
+    ): key is keyof T { return key in doc; }
 }
 
 export namespace Schema {
-    export type WithID<T> = T & { _id: string };
+    export type Infer<S extends Schema> = Schema.Infer.schema<S>;
+    export type Flatten<S extends Schema.Schema> = (
+        Utilities.Flatten.Object<Infer.schema<S>, 10>
+    );
     export interface Document {
         [Key: string]: any;
     }

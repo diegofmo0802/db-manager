@@ -1,3 +1,4 @@
+import { Utilities } from 'saml.servercore';
 import Schema from '../build/Schema/Schema.js';
 // Función de prueba para la clase Schema
 function testSchema() {
@@ -18,7 +19,6 @@ function testSchema() {
             property: { type: 'number' },
         }
     });
-    console.log("Esquema inferido:", schema.infer);
     try {
         // Prueba 1: Valores correctos
         const validDoc = {
@@ -95,6 +95,18 @@ function testSchema() {
         console.log("Prueba 5 - Datos generados (valores por defecto y nullables):", generatedData5);
     } catch (error) {
         console.error("Prueba 5 - Error:", error.message);
+    }
+    try {
+        // Prueba 6: Validacion de datos parciales
+        const partialDoc = {
+            str: "TestString",
+            num: 90,
+            'obj.subStr': null,
+        };
+        const generatedData6 = schema.processPartialData(partialDoc);
+        console.log("Prueba 6 - Datos generados (valores por defecto y nullables):", generatedData6);
+    } catch (error) {
+        console.error("Prueba 6 - Error:", error.message);
     }
 }
 
