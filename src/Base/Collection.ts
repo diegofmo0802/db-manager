@@ -118,7 +118,7 @@ export namespace Collection {
     );
     export type Filter<S extends Schema.Schema> = mongodb.Filter<
         Infer<S>
-    > & Partial<Utilities.flatten.Object<Infer<S>>>;
+    > & Partial<Utilities.Flatten.Object<Infer<S>>>;
     export namespace aggregate {
         interface Match<S extends Schema.Schema> {
             $match: Filter<S>;
@@ -126,11 +126,11 @@ export namespace Collection {
         interface Unwind<S extends Schema.Schema> {
             $unwind: {
                 path: `$${keyof (
-                    Infer<S> & Utilities.flatten.Object<Infer<S>> // & Schema.Document
+                    Infer<S> & Utilities.Flatten.Object<Infer<S>> // & Schema.Document
                 )}`;
                 preserveNullAndEmptyArrays?: boolean;
             } | `$${keyof (
-                Infer<S> & Utilities.flatten.Object<Infer<S>> // & Schema.Document
+                Infer<S> & Utilities.Flatten.Object<Infer<S>> // & Schema.Document
             )}`;
         }
         interface UnwindStr {
@@ -147,12 +147,12 @@ export namespace Collection {
         }
         interface sort<S extends Schema.Schema> {
             $sort: { [Key in keyof (
-                Infer<S> & Utilities.flatten.Object<Infer<S>> & Schema.Document
+                Infer<S> & Utilities.Flatten.Object<Infer<S>> & Schema.Document
             )]?: 1 | -1; };
         }
         interface Project<S extends Schema.Schema> {
             $project: { [Key in keyof (
-                Infer<S> & Utilities.flatten.Object<Infer<S>> & Schema.Document
+                Infer<S> & Utilities.Flatten.Object<Infer<S>> & Schema.Document
             )]?: 1 | 0; };
         }
         interface Lookup<
@@ -162,8 +162,8 @@ export namespace Collection {
         > {
             $lookup: {
                 from: Destination;
-                localField: keyof Utilities.flatten.Object<Infer<S>>;
-                foreignField: keyof Utilities.flatten.Object<Infer<Ss[Destination]['schema']>>;
+                localField: keyof Utilities.Flatten.Object<Infer<S>>;
+                foreignField: keyof Utilities.Flatten.Object<Infer<Ss[Destination]['schema']>>;
                 as: string;
             };
         }
@@ -179,7 +179,7 @@ export namespace Collection {
     export namespace Update {
         export type Filter<S extends Schema.Schema> = mongodb.UpdateFilter<
             Infer<S>
-        > & Partial<Utilities.flatten.Object<Infer<S>>>;
+        > & Partial<Utilities.Flatten.Object<Infer<S>>>;
         export type Result<S extends Schema.Schema> = mongodb.UpdateResult<
             Infer<S>
         >;
