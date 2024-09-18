@@ -13,7 +13,6 @@ export class Connection {
         try {
             await this.client.connect();
             this.connected = true;
-            console.log("connected");
             return this;
         } catch (error) {
             const cause = error instanceof mongodb.MongoServerError ? error.errmsg : error;
@@ -25,7 +24,6 @@ export class Connection {
         try {
             await this.client.close();
             this.connected = false;
-            console.log("closed");
         } catch (error) {
             const cause = error instanceof mongodb.MongoServerError ? error.errmsg : error;
             throw new connectionError('could not close connection: ' + cause);
