@@ -323,7 +323,7 @@ export class Schema<S extends Schema.Schema> {
         if (!doc) doc = this.schema;
         for (const key in doc) {
             const prop = doc[key];
-            if (prop.unique) uniques.push(parentKey ? `${parentKey}.${key}` : key);
+            if (key !== '_id' && prop.unique) uniques.push(parentKey ? `${parentKey}.${key}` : key);
             if (prop.type === 'object') {
                 uniques.push(...this.listUniques(prop.schema, parentKey ? `${parentKey}.${key}` : key));
             }
