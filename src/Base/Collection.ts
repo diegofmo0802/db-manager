@@ -141,7 +141,7 @@ export namespace Collection {
     );
     export type Filter<S extends Schema.Schema> = mongodb.Filter<
         Infer<S>
-    > & Partial<Utilities.Flatten.Object<Infer<S>>>;
+    > & mongodb.Filter<Partial<Utilities.Flatten.Object<Infer<S>>>>;
     export namespace aggregate {
         interface Match<S extends Schema.Schema> {
             $match: Filter<S>;
