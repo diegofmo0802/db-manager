@@ -35,8 +35,8 @@ export class Collection<
             throw new operationError('could not find documents: ', error);
         }
     }
-    public aggregate<Result extends Schema.Document = any>(pipeline: Collection.aggregate.option<Ss, S>[], options?: mongodb.AggregateOptions): Promise<Result[]> {
-        try { return this.collection.aggregate<Result>(pipeline, options).toArray(); }
+    public async aggregate<Result extends Schema.Document = any>(pipeline: Collection.aggregate.option<Ss, S>[], options?: mongodb.AggregateOptions): Promise<Result[]> {
+        try { return await this.collection.aggregate<Result>(pipeline, options).toArray(); }
         catch (error) {
             throw new operationError('could not aggregate documents', error);
         }
@@ -48,9 +48,9 @@ export class Collection<
             throw new operationError('could not insert one document', error);
         }
     }
-    public insertMany(docs: Collection.Infer<S>[], options?: mongodb.BulkWriteOptions): Promise<Collection.Insert.ManyResult<S>> {
+    public async insertMany(docs: Collection.Infer<S>[], options?: mongodb.BulkWriteOptions): Promise<Collection.Insert.ManyResult<S>> {
         const data = docs.map(doc => this.Schema.processData(doc) as mongodb.OptionalUnlessRequiredId<Collection.Infer<S>>);
-        try { return this.collection.insertMany(data, options); }
+        try { return await this.collection.insertMany(data, options); }
         catch (error) {
             throw new operationError('could not insert many documents', error);
         }
@@ -67,6 +67,27 @@ export class Collection<
         try { return await this.collection.updateMany(filter, update, options); }
         catch (error) {
             throw new operationError('could not update many documents', error);
+        }
+    }
+    public findOneAndUpdate<Result extends Schema.Document = Collection.Infer<S>>(
+        filter: Collection.Filter<S>, 
+        update: Collection.Update.Filter<S>, 
+        options: mongodb.FindOneAndUpdateOptions & { includeResultMetadata: true }
+    ): Promise<Collection.Update.findResult<Result>>;
+    public findOneAndUpdate<Result extends Schema.Document = Collection.Infer<S>>(
+        filter: Collection.Filter<S>, 
+        update: Collection.Update.Filter<S>, 
+        options?: mongodb.FindOneAndUpdateOptions & { includeResultMetadata?: false }
+    ): Promise<Result | null>;
+    public async findOneAndUpdate<Result extends Schema.Document = Collection.Infer<S>>(
+        filter: Collection.Filter<S>, 
+        update: Collection.Update.Filter<S>, 
+        options: mongodb.FindOneAndUpdateOptions = {}
+    ): Promise<Collection.Update.findResult<Result> | mongodb.WithId<Collection.Infer<S>> | null> {
+        if (update.$set) update.$set = this.Schema.processPartialData(update.$set);
+        try { return await this.collection.findOneAndUpdate(filter, update, options); }
+        catch (error) {
+            throw new operationError('could not find and update one document', error);
         }
     }
     public async deleteOne(filter: Collection.Filter<S>, options?: mongodb.DeleteOptions): Promise<mongodb.DeleteResult> {
@@ -182,9 +203,15 @@ export namespace Collection {
         export type Filter<S extends Schema.Schema> = mongodb.UpdateFilter<
             Infer<S>
         > & {
-            $set: Partial<Flatten<S>>;
+            $set?: Partial<Flatten<S>>;
+            $inc?: { [Key in keyof (
+                Infer<S> & Utilities.Flatten.Object<Infer<S>> & Schema.Document
+            )]?: number; };
         };
         export type Result<S extends Schema.Schema> = mongodb.UpdateResult<
+            Infer<S>
+        >;
+        export type findResult<S extends Schema.Schema> = mongodb.ModifyResult<
             Infer<S>
         >;
     }
