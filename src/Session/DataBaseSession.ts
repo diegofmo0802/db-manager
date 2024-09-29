@@ -30,7 +30,7 @@ export class DataBaseSession<Ss extends Record<string, Schema<any>>> {
         await connection.connect();
         const session = connection.startSession();
         session.startTransaction();
-        const db = new DataBase(connection, this.name, this.schemas, this.options);
+        const db = new DataBase(connection, this.name, this.schemas, this.options, session);
         try {
             const result = await operation(db);
             await session.commitTransaction();

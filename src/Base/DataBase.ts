@@ -11,14 +11,15 @@ export class DataBase<Ss extends Record<string, Schema<any>>> {
         public readonly connection: Connection,
         protected readonly name: string,
         protected readonly schemas: Ss,
-        protected readonly options?: mongodb.DbOptions
+        protected readonly options?: mongodb.DbOptions,
+        protected readonly session?: mongodb.ClientSession
     ) {
         this.db = this.connection.db(name, options);
     }
 
     public collection<N extends keyof Ss>(name: N): Collection<Ss, Ss[N]['schema']> {
         const schema = this.schemas[name];
-        return new Collection(this, name as string, schema);
+        return new Collection(this, name as string, schema, this.session);
     }
     public async init(): Promise<void> {
         for (const schema in this.schemas) {

@@ -14,55 +14,62 @@ export class Collection<
     public constructor(
         public dbManager: DataBase<Ss>,
         public readonly name: string,
-        public readonly Schema: Schema<S>
+        public readonly Schema: Schema<S>,
+        protected readonly session?: mongodb.ClientSession
     ) {
         this.db = this.dbManager.db;
         this.collection = this.db.collection(this.name);
     }
-    
     public get infer(): Collection.Infer<S> {
         return {} as Collection.Infer<S>;
     }
-    public async findOne<Result = Collection.Infer<S>>(filter: Collection.Filter<S> = {}, options?: mongodb.FindOptions): Promise<Result | null> {
+    public async findOne<Result = Collection.Infer<S>>(filter: Collection.Filter<S> = {}, options: mongodb.FindOptions = {}): Promise<Result | null> {
+        if (this.session) options.session = this.session;
         try { return await this.collection.findOne<Result>(filter, options); }
         catch (error) {
             throw new operationError('could not find one document: ', error);
         }
     }
-    public async find<Result extends Schema.Document = Collection.Infer<S>>(filter: Collection.Filter<S> = {}, options?: mongodb.FindOptions): Promise<Result[]> {
+    public async find<Result extends Schema.Document = Collection.Infer<S>>(filter: Collection.Filter<S> = {}, options: mongodb.FindOptions): Promise<Result[]> {
+        if (this.session) options.session = this.session;
         try { return await this.collection.find<Result>(filter, options).toArray(); }
         catch (error) {
             throw new operationError('could not find documents: ', error);
         }
     }
-    public async aggregate<Result extends Schema.Document = any>(pipeline: Collection.aggregate.option<Ss, S>[], options?: mongodb.AggregateOptions): Promise<Result[]> {
+    public async aggregate<Result extends Schema.Document = any>(pipeline: Collection.aggregate.option<Ss, S>[], options: mongodb.AggregateOptions = {}): Promise<Result[]> {
+        if (this.session) options.session = this.session;
         try { return await this.collection.aggregate<Result>(pipeline, options).toArray(); }
         catch (error) {
             throw new operationError('could not aggregate documents', error);
         }
     }
-    public async insertOne(doc: Collection.Infer<S>, options?: mongodb.InsertOneOptions): Promise<Collection.Insert.Result<S>> {
+    public async insertOne(doc: Collection.Infer<S>, options: mongodb.InsertOneOptions = {}): Promise<Collection.Insert.Result<S>> {
+        if (this.session) options.session = this.session;
         const data = this.Schema.processData(doc) as mongodb.OptionalUnlessRequiredId<Collection.Infer<S>>;
         try { return await this.collection.insertOne(data, options); }
         catch (error) {
             throw new operationError('could not insert one document', error);
         }
     }
-    public async insertMany(docs: Collection.Infer<S>[], options?: mongodb.BulkWriteOptions): Promise<Collection.Insert.ManyResult<S>> {
+    public async insertMany(docs: Collection.Infer<S>[], options: mongodb.BulkWriteOptions = {}): Promise<Collection.Insert.ManyResult<S>> {
+        if (this.session) options.session = this.session;
         const data = docs.map(doc => this.Schema.processData(doc) as mongodb.OptionalUnlessRequiredId<Collection.Infer<S>>);
         try { return await this.collection.insertMany(data, options); }
         catch (error) {
             throw new operationError('could not insert many documents', error);
         }
     }
-    public async updateOne(filter: Collection.Filter<S>, update: Collection.Update.Filter<S>, options?: mongodb.UpdateOptions): Promise<Collection.Update.Result<S>> {
+    public async updateOne(filter: Collection.Filter<S>, update: Collection.Update.Filter<S>, options: mongodb.UpdateOptions = {}): Promise<Collection.Update.Result<S>> {
+        if (this.session) options.session = this.session;
         if (update.$set) update.$set = this.Schema.processPartialData(update.$set);
         try { return await this.collection.updateOne(filter, update, options); }
         catch (error) {
             throw new operationError('could not update one document', error);
         }
     }
-    public async updateMany(filter: Collection.Filter<S>, update: Collection.Update.Filter<S>, options?: mongodb.UpdateOptions): Promise<Collection.Update.Result<S>> {
+    public async updateMany(filter: Collection.Filter<S>, update: Collection.Update.Filter<S>, options: mongodb.UpdateOptions = {}): Promise<Collection.Update.Result<S>> {
+        if (this.session) options.session = this.session;
         if (update.$set) update.$set = this.Schema.processPartialData(update.$set);
         try { return await this.collection.updateMany(filter, update, options); }
         catch (error) {
@@ -84,25 +91,29 @@ export class Collection<
         update: Collection.Update.Filter<S>, 
         options: mongodb.FindOneAndUpdateOptions = {}
     ): Promise<Collection.Update.findResult<Result> | mongodb.WithId<Collection.Infer<S>> | null> {
+        if (this.session) options.session = this.session;
         if (update.$set) update.$set = this.Schema.processPartialData(update.$set);
         try { return await this.collection.findOneAndUpdate(filter, update, options); }
         catch (error) {
             throw new operationError('could not find and update one document', error);
         }
     }
-    public async deleteOne(filter: Collection.Filter<S>, options?: mongodb.DeleteOptions): Promise<mongodb.DeleteResult> {
+    public async deleteOne(filter: Collection.Filter<S>, options: mongodb.DeleteOptions = {}): Promise<mongodb.DeleteResult> {
+        if (this.session) options.session = this.session;
         try { return await this.collection.deleteOne(filter, options); }
         catch (error) {
             throw new operationError('could not delete one document', error);
         }
     }
-    public async deleteMany(filter: Collection.Filter<S>, options?: mongodb.DeleteOptions): Promise<mongodb.DeleteResult> {
+    public async deleteMany(filter: Collection.Filter<S>, options: mongodb.DeleteOptions = {}): Promise<mongodb.DeleteResult> {
+        if (this.session) options.session = this.session;
         try { return await this.collection.deleteMany(filter, options); }
         catch (error) {
             throw new operationError('could not delete many documents', error);
         }
     }
-    public async countDocuments(filter?: Collection.Filter<S>, options?: mongodb.CountDocumentsOptions): Promise<number> {
+    public async countDocuments(filter?: Collection.Filter<S>, options: mongodb.CountDocumentsOptions = {}): Promise<number> {
+        if (this.session) options.session = this.session;
         try { return await this.collection.countDocuments(filter, options); }
         catch (error) {
             throw new operationError('could not count documents', error);
