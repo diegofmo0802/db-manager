@@ -3,9 +3,11 @@ import mongodb from 'mongodb';
 import Collection from './Collection.js';
 import Schema from '../Schema/Schema.js';
 import Connection from './Connection.js';
+import Counter from './Counter.js';
 
 export class DataBase<Ss extends Record<string, Schema<any>>> {
     public readonly db: mongodb.Db;
+    protected _counter?: Counter;
 
     constructor(
         public readonly connection: Connection,
@@ -15,6 +17,11 @@ export class DataBase<Ss extends Record<string, Schema<any>>> {
         protected readonly session?: mongodb.ClientSession
     ) {
         this.db = this.connection.db(name, options);
+    }
+
+    public get counter(): Counter {
+        if (!this._counter) this._counter = new Counter(this.connection, this.name, this.session);
+        return this._counter;
     }
 
     public collection<N extends keyof Ss>(name: N): Collection<Ss, Ss[N]['schema']> {
