@@ -340,12 +340,14 @@ export class Schema<S extends Schema.Schema> {
         const sch: JSONSchema.schema = {};
         sch.type = 'object';
         sch.properties = {};
-        sch.required = [];
         for (const key in schema) {
             const prop = schema[key];
             let subSch: JSONSchema.schema = {};
             subSch.type = prop.nullable ? [prop.type, 'null'] : prop.type;
-            if (prop.required) sch.required.push(key);
+            if (prop.required) {
+                if (sch.required == null) sch.required = [];
+                sch.required.push(key);
+            }
             switch (prop.type) {
                 case 'string': {
                     if (prop.minLength !== undefined) subSch.minLength = prop.minLength;
