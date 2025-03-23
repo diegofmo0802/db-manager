@@ -30,7 +30,7 @@ export class Collection<
             throw new operationError('could not find one document: ', error);
         }
     }
-    public async find<Result extends Schema.Document = Collection.Infer<S>>(filter: Collection.Filter<S> = {}, options: mongodb.FindOptions): Promise<Result[]> {
+    public async find<Result extends Schema.Document = Collection.Infer<S>>(filter: Collection.Filter<S> = {}, options: mongodb.FindOptions = {}): Promise<Result[]> {
         if (this.session) options.session = this.session;
         try { return await this.collection.find<Result>(filter, options).toArray(); }
         catch (error) {
