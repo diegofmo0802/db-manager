@@ -467,6 +467,24 @@ export namespace Schema {
         } & {
             [K in keyof S as S[K]['required'] extends true ? never : K]?: property<S[K]>;
         };
+        /* To a future change
+        export type schema<S extends Schema, insertMode = false> = insertMode extends false ? ({
+            [K in keyof S as S[K]['required'] extends true ? K : never]: property<S[K]>;
+        } & {
+            [K in keyof S as S[K]['required'] extends true ? never : K]?: property<S[K]>;
+        }) : ({
+            [
+                K in keyof S as S[K]['required'] extends true
+                ? undefined extends S[K]['default'] ? K : never
+                : never
+            ]: property<S[K]>;
+        } & {
+            [
+                K in keyof S as S[K]['required'] extends true
+                ?  undefined extends S[K]['default'] ? never : K
+                : K
+            ]?: property<S[K]>;
+        }); */
         export type schemaPartial<S extends Schema> = {
             [K in keyof S]?: property<S[K], true>;
         };
