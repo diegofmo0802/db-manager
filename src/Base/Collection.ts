@@ -44,7 +44,7 @@ export class Collection<
             throw new operationError('could not aggregate documents', error);
         }
     }
-    public async insertOne(doc: Collection.Infer<S>, options: mongodb.InsertOneOptions = {}): Promise<Collection.Insert.Result<S>> {
+    public async insertOne(doc: Collection.InferToProcess<S>, options: mongodb.InsertOneOptions = {}): Promise<Collection.Insert.Result<S>> {
         if (this.session) options.session = this.session;
         const data = this.Schema.processData(doc) as mongodb.OptionalUnlessRequiredId<Collection.Infer<S>>;
         try { return await this.collection.insertOne(data, options); }
@@ -52,8 +52,9 @@ export class Collection<
             throw new operationError('could not insert one document', error);
         }
     }
-    public async insertMany(docs: Collection.Infer<S>[], options: mongodb.BulkWriteOptions = {}): Promise<Collection.Insert.ManyResult<S>> {
+    public async insertMany(docs: Collection.InferToProcess<S>[], options: mongodb.BulkWriteOptions = {}): Promise<Collection.Insert.ManyResult<S>> {
         if (this.session) options.session = this.session;
+        const x: Schema.Infer<S> = {} as Schema.Infer<S>;
         const data = docs.map(doc => this.Schema.processData(doc) as mongodb.OptionalUnlessRequiredId<Collection.Infer<S>>);
         try { return await this.collection.insertMany(data, options); }
         catch (error) {
@@ -145,10 +146,16 @@ export class Collection<
 }
 export namespace Collection {
     export type Infer<S extends Schema.Schema> = (
-        Schema.Infer.schema<S>
+        Schema.Infer<S>
+    );
+    export type InferToProcess<S extends Schema.Schema> = (
+        Schema.InferToProcess<S>
     );
     export type Flatten<S extends Schema.Schema> = (
         Schema.Flatten<S>
+    );
+    export type FlattenToProcess<S extends Schema.Schema> = (
+        Schema.FlattenToProcess<S>
     );
     export type Filter<S extends Schema.Schema> = mongodb.Filter<
         Infer<S>
@@ -214,9 +221,9 @@ export namespace Collection {
         export type Filter<S extends Schema.Schema> = mongodb.UpdateFilter<
             Infer<S>
         > & {
-            $set?: Partial<Flatten<S>>;
+            $set?: Partial<FlattenToProcess<S>>;
             $inc?: { [Key in keyof (
-                Infer<S> & Utilities.Flatten.Object<Infer<S>> & Schema.Document
+                Infer<S> & Utilities.Flatten.Object<InferToProcess<S>> & Schema.Document
             )]?: number; };
         };
         export type Result<S extends Schema.Schema> = mongodb.UpdateResult<

@@ -9,6 +9,47 @@ export class Schema<S extends Schema.Schema> {
         this.validateStructure();
     }
     /**
+     * get the infered schema as an object
+     * is only to be used for testing purposes
+     * this method only returns an empty object with the respective infered type
+     * this method is not able to be used out of development
+     * @returns the infered schema
+     */
+    public get infer(): Schema.Infer<this['schema']> {
+        return {} as Schema.Infer<this['schema']>;
+    }
+    /**
+     * get the infered schema to process as an object
+     * is only to be used for testing purposes
+     * this method only returns an empty object with the respective infered type
+     * this method is not able to be used out of development
+     * @returns the infered schema
+     */
+    public get inferToProcess(): Schema.InferToProcess<this['schema']> {
+        return {} as Schema.InferToProcess<this['schema']>;
+    }
+    /**
+     * get the json schema as an object
+     * @returns the json schema
+     */
+    public get jsonSchema(): JSONSchema.schema {
+        return this.toJsonSchema();
+    }
+    /**
+     * get the json schema as a JSON string
+     * @returns the json schema as a string
+     */
+    public get jsonSchemaJSON(): string {
+        return JSON.stringify(this.jsonSchema);
+    }
+    /**
+     * get the list of unique keys
+     * @returns the list of unique keys
+     */
+    public get uniques(): string[] {
+        return this.listUniques();
+    }
+    /**
      * Validates the overall structure of the schema.
      * @param schema Optional partial schema to validate, defaults to the full schema.
      * @param parentKey The key path to the current schema, used for error reporting.
@@ -102,42 +143,15 @@ export class Schema<S extends Schema.Schema> {
         this.validateStructure(prop.schema, key);
     }
     /**
-     * get the infered schema as an object
-     * is only to be used for testing purposes
-     * @returns the infered schema
-     */
-    public get infer(): Schema.Infer<this['schema']> {
-        return {} as Schema.Infer<this['schema']>;
-    }
-    /**
-     * get the json schema as an object
-     * @returns the json schema
-     */
-    public get jsonSchema(): JSONSchema.schema {
-        return this.toJsonSchema();
-    }
-    /**
-     * get the json schema as a JSON string
-     * @returns the json schema as a string
-     */
-    public get jsonSchemaJSON(): string {
-        return JSON.stringify(this.jsonSchema);
-    }
-    /**
-     * get the list of unique keys
-     * @returns the list of unique keys
-     */
-    public get uniques(): string[] {
-        return this.listUniques();
-    }
-    /**
      * process the provided data
      * @param data the data to process
      * @param partial if the data is partial
      * @returns the processed data
      * @throws schemaError if the data is not valid
      */
-    public processData(data: Schema.Infer<this['schema']>, partial: boolean = false): Schema.Infer<this['schema']> {
+    public processData(data: Schema.Infer<this['schema']>, partial?: boolean): Schema.Infer<this['schema']>;
+    public processData(data: Schema.InferToProcess<this['schema']>, partial?: boolean): Schema.Infer<this['schema']>;
+    public processData(data: any, partial: boolean = false): Schema.Infer<this['schema']> {
         const result: any = {};
         const iterable = partial ? data : this.schema;
         for (const key in iterable) {
@@ -149,8 +163,12 @@ export class Schema<S extends Schema.Schema> {
         return result;
     }
     public processPartialData(
+        data: Partial<Schema.FlattenToProcess<this['schema']>> & Partial<Schema.InferToProcess<this['schema']>> & Schema.Document,
+    ): Partial<Schema.Flatten<this['schema']>> & Partial<Schema.Infer<this['schema']>> & Schema.Document;
+    public processPartialData(
         data: Partial<Schema.Flatten<this['schema']>> & Partial<Schema.Infer<this['schema']>> & Schema.Document,
-    ): Partial<Schema.Flatten<this['schema']>> & Partial<Schema.Infer<this['schema']>> & Schema.Document {
+    ): Partial<Schema.Flatten<this['schema']>> & Partial<Schema.Infer<this['schema']>> & Schema.Document;
+    public processPartialData(data: any): Partial<Schema.Flatten<this['schema']>> & Partial<Schema.Infer<this['schema']>> & Schema.Document {
         const result: any = {};
         let currentProp: Schema.property;
         for (const key in data) {
@@ -286,7 +304,7 @@ export class Schema<S extends Schema.Schema> {
      * @param key the key of the property
      * @throws schemaError if the data is not valid
     */
-    protected validateObject(value: any, prop: Schema.Property.Object, key: string, pattial = true) {
+    protected validateObject(value: any, prop: Schema.Property.Object, key: string, partial = true) {
         if (value == null && prop.nullable === true) return;
         if (typeof value !== 'object') throw new schemaError(`Property ${key} must be an object`);
         this.validateStructure(prop.schema, key);
@@ -385,8 +403,12 @@ export class Schema<S extends Schema.Schema> {
 
 export namespace Schema {
     export type Infer<S extends Schema> = Schema.Infer.schema<S>;
+    export type InferToProcess<S extends Schema> = Schema.Infer.schemaToProcess<S>;
     export type Flatten<S extends Schema.Schema> = (
         Utilities.Flatten.Object<Infer.schema<S>, 10>
+    );
+    export type FlattenToProcess<S extends Schema.Schema> = (
+        Utilities.Flatten.Object<Infer.schemaToProcess<S>, 10>
     );
     export interface Document {
         [Key: string]: any;
@@ -397,6 +419,10 @@ export namespace Schema {
         boolean: boolean;
         object: any;
         array: any[];
+    }
+    export namespace Helper {
+        export type HasDefault<T> =  T extends { default: infer D } ? (undefined extends D ? false : true) : false;
+        export type IsRequired<T> =  T extends { required: infer D } ? (undefined extends D ? false : true) : false;
     }
     export namespace Property {
         interface Base<T extends keyof TypeMap> {
@@ -463,28 +489,23 @@ export namespace Schema {
                     propertyType<P, Partial>
         );
         export type schema<S extends Schema> = {
-            [K in keyof S as S[K]['required'] extends true ? K : never]: property<S[K]>;
+            [K in keyof S as Helper.IsRequired<S[K]> extends true ? K : never]: property<S[K]>;
         } & {
-            [K in keyof S as S[K]['required'] extends true ? never : K]?: property<S[K]>;
+            [K in keyof S as Helper.IsRequired<S[K]> extends false ? K : never]?: property<S[K]>;
         };
-        /* To a future change
-        export type schema<S extends Schema, insertMode = false> = insertMode extends false ? ({
-            [K in keyof S as S[K]['required'] extends true ? K : never]: property<S[K]>;
-        } & {
-            [K in keyof S as S[K]['required'] extends true ? never : K]?: property<S[K]>;
-        }) : ({
+        export type schemaToProcess<S extends Schema> = ({
             [
-                K in keyof S as S[K]['required'] extends true
-                ? undefined extends S[K]['default'] ? K : never
+                K in keyof S as Helper.IsRequired<S[K]> extends true
+                ? Helper.HasDefault<S[K]> extends false ? K : never
                 : never
             ]: property<S[K]>;
         } & {
             [
-                K in keyof S as S[K]['required'] extends true
-                ?  undefined extends S[K]['default'] ? never : K
+                K in keyof S as Helper.IsRequired<S[K]> extends true
+                ? Helper.HasDefault<S[K]> extends true ? K : never
                 : K
             ]?: property<S[K]>;
-        }); */
+        });
         export type schemaPartial<S extends Schema> = {
             [K in keyof S]?: property<S[K], true>;
         };
@@ -495,3 +516,4 @@ export namespace Schema {
 }
 
 export default Schema;
+// TODO: Add more helpers like IsNullable, IsType<P, T> property type to the Schema manager
