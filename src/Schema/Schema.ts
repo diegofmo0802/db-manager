@@ -463,30 +463,32 @@ export namespace Schema {
         [Key: string]: property;
     }
     export namespace Infer {
-        export type propertyType<P extends Schema.property, Partial extends boolean = false> = (
+        export type propertyType<P extends Schema.property, Mode extends ('partial' | 'process' | 'complete') = 'complete'> = (
             P extends Property.String  ? string  :
             P extends Property.Number  ? number  :
             P extends Property.Boolean ? boolean :
             P extends Property.Object  ? (
-                Partial extends false
-                ? schema<P['schema']>
-                : schemaPartial<P['schema']>
+                Mode extends 'process'
+                    ? schemaToProcess<P['schema']>
+                :  Mode extends 'partial'
+                    ? schemaPartial<P['schema']>
+                    : schema<P['schema']>
             ) :
             P extends Property.Array   ? propertyType<P['property']>[] :
             never
         );
-        export type property<P extends Schema.property, Partial extends boolean = false> = (
-            P['required'] extends true ?
-                propertyType<P, Partial> :
-            undefined extends P['default'] ?
+        export type property<P extends Schema.property, Mode extends ('partial' | 'process' | 'complete') = 'complete'> = (
+            Helper.IsRequired<P> extends true ?
+                propertyType<P, Mode> :
+            Helper.HasDefault<P> extends false ?
                 undefined extends P['nullable'] ?
-                    propertyType<P, Partial> | undefined :
+                    propertyType<P, Mode> | undefined :
                     P['nullable'] extends true ?
-                        propertyType<P, Partial> | null :
-                        propertyType<P, Partial>
+                        propertyType<P, Mode> | null :
+                        propertyType<P, Mode>
                 : P['default'] extends null ?
-                    propertyType<P, Partial> | null :
-                    propertyType<P, Partial>
+                    propertyType<P, Mode> | null :
+                    propertyType<P, Mode>
         );
         export type schema<S extends Schema> = {
             [K in keyof S as Helper.IsRequired<S[K]> extends true ? K : never]: property<S[K]>;
@@ -498,16 +500,16 @@ export namespace Schema {
                 K in keyof S as Helper.IsRequired<S[K]> extends true
                 ? Helper.HasDefault<S[K]> extends false ? K : never
                 : never
-            ]: property<S[K]>;
+            ]: property<S[K], 'process'>;
         } & {
             [
                 K in keyof S as Helper.IsRequired<S[K]> extends true
                 ? Helper.HasDefault<S[K]> extends true ? K : never
                 : K
-            ]?: property<S[K]>;
+            ]?: property<S[K], 'process'>;
         });
         export type schemaPartial<S extends Schema> = {
-            [K in keyof S]?: property<S[K], true>;
+            [K in keyof S]?: property<S[K], 'partial'>;
         };
         export type schemaBase<S extends Schema> = {
             [K in keyof S]: property<S[K]>
