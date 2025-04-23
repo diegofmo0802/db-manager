@@ -127,19 +127,18 @@ export class Collection<
         }
     }
     public async create(): Promise<void> {
+        const $jsonSchema = this.Schema.jsonSchema;
+        const uniques = this.Schema.uniques;
         const exist = await this.exists();
         if (exist) throw new operationError('collection already exists');
         try {
-            await this.db.createCollection(this.name, {
-                validator: { $jsonSchema: this.Schema.jsonSchema }
-            });
-            await this.collection.createIndexes(this.Schema.uniques.map(unique => {
+            await this.db.createCollection(this.name, { validator: { $jsonSchema } });
+            if (uniques.length > 0) await this.collection.createIndexes(uniques.map(unique => {
                 const key: mongodb.IndexSpecification = {};
                 key[unique] = 1;
                 return { key, unique: true };
             }));
-        }
-        catch (error) {
+        } catch (error) {
             throw new operationError('could not create collection', error)
         }
     }
