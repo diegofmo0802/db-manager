@@ -195,7 +195,7 @@ export namespace Collection {
                 Infer<S> & Utilities.Flatten.Object<Infer<S>> & Schema.Document
             )]?: 1 | 0; };
         }
-        interface Lookup<
+        interface LookupNoAutoInfered<
             Ss extends Record<string, Schema<any>>,
             S extends Schema.Schema,
             Destination extends keyof Ss = keyof Ss
@@ -203,9 +203,28 @@ export namespace Collection {
             $lookup: {
                 from: Destination;
                 localField: keyof Utilities.Flatten.Object<Infer<S>>;
-                foreignField: keyof Utilities.Flatten.Object<Infer<Ss[Destination]['schema']>>;
+                foreignField: string | keyof Utilities.Flatten.Object<Infer<Ss[Destination]['schema']>>;
                 as: string;
             };
+        }
+        type Lookup<
+            Ss extends Record<string, Schema<any>>,
+            S extends Schema.Schema,
+            Destination extends keyof Ss = keyof Ss
+        > = Destination extends keyof Ss ? {
+            $lookup: {
+                from: Destination;
+                localField: keyof Utilities.Flatten.Object<Infer<S>>;
+                foreignField: keyof Utilities.Flatten.Object<Schema.Infer<Ss[Destination]['schema']>>;
+                as: string;
+            };
+        } : LookupNoAutoInfered<Ss, S>;
+        interface SetStage<S extends Schema.Schema> {
+            $set: {
+                [Key in keyof (
+                    Infer<S> & Utilities.Flatten.Object<Infer<S>> & Schema.Document
+                )]?: Infer<S>[Extract<Key, keyof Infer<S>>] | string | number | boolean | null;
+            } & Record<string, string | number | boolean | null>;
         }
         export type option<
             Ss extends Record<string, Schema<any>>,
@@ -214,6 +233,7 @@ export namespace Collection {
             skip | limit | sort<S>
             | Match<S>  | Lookup<Ss, S>
             | Unwind<S> | UnwindStr | Project<S>
+            | SetStage<S>
         )
     }
     export namespace Update {
