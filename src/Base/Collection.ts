@@ -233,7 +233,8 @@ export namespace Collection {
             skip | limit | sort<S>
             | Match<S>  | Lookup<Ss, S>
             | Unwind<S> | UnwindStr | Project<S>
-            | SetStage<S>
+            /* | SetStage Update.Filter can be the best options but need tests */
+            | Update.Filter<S>
         )
     }
     export namespace Update {
