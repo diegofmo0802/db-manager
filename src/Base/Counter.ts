@@ -1,5 +1,5 @@
 import Schema from '../Schema/Schema.js'
-import Collection from './Collection';
+import Collection from './Collection.js';
 import Connection from "./Connection.js";
 import DataBase from "./DataBase.js";
 
