@@ -14,8 +14,13 @@ export class Manager {
         const host = options.host ?? 'localhost';
         const port = options.port ?? 27017;
         const auth = username && password ? `${options.username}:${password}@` : '';
-        const endPoint = `${host}:${port}`;
-        this.url = 'mongodb://' + auth + endPoint;
+        const route = `${host}:${port}`;
+
+        let parameters = '?'
+        if (options.tls) parameters += 'tls=true&';
+        parameters = parameters.slice(0, -1);
+
+        this.url = 'mongodb://' + auth + route + parameters;
     }
     public get newConnection() {
         return new Connection(this.url);
@@ -40,6 +45,7 @@ export namespace Manager {
         port?: number
         username?: string
         password?: string
+        tls?: boolean
     }
 }
 
