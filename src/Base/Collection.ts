@@ -1,5 +1,5 @@
 import mongodb from 'mongodb';
-import { Utilities } from 'saml.servercore';
+import { Utilities } from 'vortez';
 
 import Schema from "../Schema/Schema.js";
 import { operationError } from '../Error.js';

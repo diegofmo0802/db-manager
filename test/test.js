@@ -1,6 +1,6 @@
 // @ts-check
 import './schemaTest.js';
-import { Utilities } from 'saml.servercore';
+import { Utilities } from 'vortez';
 import Manager from '../build/Manager.js';
 import { users, posts } from './schemas.js';
 

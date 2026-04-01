@@ -1,4 +1,4 @@
-import { Utilities } from 'saml.servercore';
+import { Utilities } from 'vortez';
 import { schemaError } from '../Error.js';
 import JSONSchema from './JSONSchema.js';
 

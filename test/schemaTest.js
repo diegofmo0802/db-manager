@@ -1,4 +1,4 @@
-import { Utilities } from 'saml.servercore';
+import { Utilities } from 'vortez';
 import Schema from '../build/Schema/Schema.js';
 // Función de prueba para la clase Schema
 function testSchema() {
